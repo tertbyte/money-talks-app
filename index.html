@@ -118,34 +118,39 @@ $('importFromTransactionBtn').addEventListener('click',()=>{const panel=$('bankI
 let stagedImport=[];
 function parseDelimited(text,delimiter){
  const rows=[];let row=[],cell='',quoted=false;
- for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){cell+='"';i++}else if(c==='"')quoted=false;else cell+=c}else if(c==='"')quoted=true;else if(c===delimiter){row.push(cell.trim());cell=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell=''}else cell+=c}
+ for(let i=0;i<text.length;i++){const ch=text[i];if(quoted){if(ch==='"'&&text[i+1]==='"'){cell+='"';i++}else if(ch==='"')quoted=false;else cell+=ch}else if(ch==='"')quoted=true;else if(ch===delimiter){row.push(cell.trim());cell=''}else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell=''}else cell+=ch}
  row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;
 }
-function normHead(s){return String(s||'').toLowerCase().replace(/[\s_./()-]+/g,' ').trim()}
+function normHead(s){return String(s||'').replace(/^\uFEFF/,'').toLowerCase().replace(/[\s_./()-]+/g,' ').trim()}
 function findCol(headers,patterns){return headers.findIndex(h=>patterns.some(p=>p.test(normHead(h))))}
-function parseAmount(v){let s=String(v??'').trim().replace(/[₹,\s]/g,'');if(!s||s==='-'||s==='—')return 0;let neg=/^\(.*\)$/.test(s);s=s.replace(/[()]/g,'').replace(/^(INR|Rs\.?)/i,'');const n=Number(s);return Number.isFinite(n)?(neg?-Math.abs(n):n):0}
-function parseBankDate(v){const s=String(v||'').trim();if(!s)return '';let m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);if(m){let a=+m[1],b=+m[2],y=m[3];let d,mn;if(a>12){d=a;mn=b}else if(b>12){mn=a;d=b}else{d=a;mn=b}return y+'-'+String(mn).padStart(2,'0')+'-'+String(d).padStart(2,'0')}m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[3]).padStart(2,'0');const d=new Date(s);if(!Number.isNaN(d.getTime()))return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return ''}
+function parseAmount(v){let s=String(v??'').trim().replace(/[₹,\s]/g,'');if(!s||s==='-'||s==='—'||/^n\/?a$/i.test(s))return 0;const neg=/^\(.*\)$/.test(s)||/^-.+/.test(s);s=s.replace(/[()]/g,'').replace(/^(INR|Rs\.?)/i,'').replace(/^-/, '');const n=Number(s);return Number.isFinite(n)?(neg?-Math.abs(n):n):0}
+function parseBankDate(v){const s=String(v||'').trim();if(!s)return '';let m=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);if(m){let a=+m[1],b=+m[2],y=+m[3];if(y<100)y+=y<50?2000:1900;let d,mn;if(a>12){d=a;mn=b}else if(b>12){mn=a;d=b}else{d=a;mn=b}if(mn<1||mn>12||d<1||d>31)return '';return y+'-'+String(mn).padStart(2,'0')+'-'+String(d).padStart(2,'0')}m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[3]).padStart(2,'0');const d=new Date(s);if(!Number.isNaN(d.getTime()))return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return ''}
 function detectCategory(desc){const s=desc.toLowerCase();if(/swiggy|zomato|restaurant|cafe|food|bakery|hotel/.test(s))return 'Food';if(/petrol|fuel|uber|ola|rapido|bus|train|irctc|metro|transport/.test(s))return 'Travel';if(/rent|landlord|hostel/.test(s))return 'Rent';if(/salary|payroll/.test(s))return 'Salary';if(/school|college|course|fee|education/.test(s))return 'Education';if(/electric|water bill|recharge|broadband|utility/.test(s))return 'Bills';if(/amazon|flipkart|shopping|myntra/.test(s))return 'Shopping';if(/hospital|pharmacy|medical|clinic/.test(s))return 'Health';if(/upi|imps|neft|rtgs|transfer/.test(s))return 'Other';return 'Other'}
 function buildBankRows(text){
- const first=text.split(/\r?\n/).find(x=>x.trim())||'';const delimiter=(first.match(/;/g)||[]).length>(first.match(/,/g)||[]).length?';':(first.match(/\t/g)||[]).length>(first.match(/,/g)||[]).length?'\t':',';
- let rows=parseDelimited(text.replace(/^\uFEFF/,''),delimiter);if(rows.length<2)throw Error('No transaction rows found. Export a statement with column headers as CSV or TSV.');
- let headers=rows[0].map(normHead);
- const dateCol=findCol(headers,[/^date$/, /transaction date/, /posting date/, /^txn date$/, /value date/]);
- const descCol=findCol(headers,[/description/, /narration/, /particular/, /transaction details/, /remarks/, /merchant/, /^details$/]);
- const debitCol=findCol(headers,[/^debit$/, /withdrawal/, /money out/, /paid out/, /debit amount/]);
- const creditCol=findCol(headers,[/^credit$/, /deposit/, /money in/, /paid in/, /credit amount/]);
- const amountCol=findCol(headers,[/^amount$/, /transaction amount/, /^txn amount$/, /amount inr/]);
- const typeCol=findCol(headers,[/^type$/, /dr cr/, /transaction type/]);
- if(dateCol<0)throw Error('Could not find a date column. Use a statement with a Date or Transaction Date header.');
- if(descCol<0)throw Error('Could not find a description/narration column. Please use a standard bank CSV export.');
- if(debitCol<0&&creditCol<0&&amountCol<0)throw Error('Could not find Amount, Debit, Credit, Withdrawal, or Deposit columns.');
+ text=String(text||'').replace(/^\uFEFF/,'');
+ const lines=text.split(/\r?\n/).filter(x=>x.trim());if(lines.length<2)throw Error('This file has fewer than two rows. Export a CSV/TSV with a header row and transactions.');
+ const sample=lines.slice(0,8).join('\n');const counts=[',',';','\t','|'].map(d=>({d,n:(sample.match(new RegExp(d==='\t'?'\\t':d==='|'?'\\|':d===';'?';':',','g'))||[]).length})).sort((a,b)=>b.n-a.n);const delimiter=counts[0].n?counts[0].d:',';
+ const rows=parseDelimited(text,delimiter);if(rows.length<2)throw Error('Could not split this file into rows. Please export it as CSV or TSV.');
+ const headerPatterns=[/^date$/, /transaction date/, /posting date/, /^txn date$/, /value date/, /^description$/, /narration/, /particular/, /transaction details/, /remarks/, /merchant/, /^details$/, /^amount$/, /^debit$/, /^credit$/, /withdrawal/, /deposit/, /transaction type/];
+ let headerIndex=rows.findIndex((row,i)=>i<12&&row.filter(cell=>headerPatterns.some(p=>p.test(normHead(cell)))).length>=2);
+ if(headerIndex<0)headerIndex=0;
+ const headers=rows[headerIndex].map(normHead);
+ const dateCol=findCol(headers,[/^date$/, /transaction date/, /posting date/, /^txn date$/, /value date/, /date time/]);
+ const descCol=findCol(headers,[/description/, /narration/, /particular/, /transaction details/, /remarks/, /merchant/, /^details$/, /transaction remarks/, /reference details/]);
+ const debitCol=findCol(headers,[/^debit$/, /withdrawal/, /money out/, /paid out/, /debit amount/, /withdrawal amt/]);
+ const creditCol=findCol(headers,[/^credit$/, /deposit/, /money in/, /paid in/, /credit amount/, /deposit amt/]);
+ const amountCol=findCol(headers,[/^amount$/, /transaction amount/, /^txn amount$/, /amount inr/, /amount rs/]);
+ const typeCol=findCol(headers,[/^type$/, /dr cr/, /transaction type/, /cr dr/]);
+ if(dateCol<0)throw Error('Could not identify the date column. The header should include Date or Transaction Date.');
+ if(descCol<0)throw Error('Could not identify the description column. Look for Description, Narration, Particulars, or Transaction Details.');
+ if(debitCol<0&&creditCol<0&&amountCol<0)throw Error('Could not identify an Amount, Debit/Credit, Withdrawal, or Deposit column.');
  const out=[];
- rows.slice(1).forEach((r,index)=>{const date=parseBankDate(r[dateCol]);const description=String(r[descCol]||'').trim();if(!date||!description)return;let amount=0,kind='expense';
- if(debitCol>=0||creditCol>=0){const debit=Math.abs(parseAmount(r[debitCol])),credit=Math.abs(parseAmount(r[creditCol]));if(credit>0){amount=credit;kind='income'}else if(debit>0){amount=debit;kind='expense'}else return}
- else{amount=parseAmount(r[amountCol]);if(!amount)return;const rawType=typeCol>=0?String(r[typeCol]||'').toLowerCase():'';if(/credit|deposit|received|cr\b/.test(rawType)||amount<0){kind='income';amount=Math.abs(amount)}else kind='expense'}
+ rows.slice(headerIndex+1).forEach((r,index)=>{const date=parseBankDate(r[dateCol]);const description=String(r[descCol]||'').trim();if(!date||!description)return;let amount=0,kind='expense';
+ if(debitCol>=0||creditCol>=0){const debit=Math.abs(parseAmount(r[debitCol])),credit=Math.abs(parseAmount(r[creditCol]));if(credit>0){amount=credit;kind='income'}else if(debit>0){amount=debit;kind='expense'}else if(amountCol>=0){amount=parseAmount(r[amountCol]);if(!amount)return;kind=amount<0?'income':'expense';amount=Math.abs(amount)}else return}
+ else{amount=parseAmount(r[amountCol]);if(!amount)return;const rawType=typeCol>=0?String(r[typeCol]||'').toLowerCase():'';if(/credit|deposit|received|\bcr\b/.test(rawType)||amount<0){kind='income';amount=Math.abs(amount)}else kind='expense'}
  out.push({id:'bank-'+Date.now()+'-'+index,type:kind,amount:Math.round(amount*100)/100,category:detectCategory(description),account:'Bank',date,note:description.slice(0,120),created:Date.now()+index,selected:true,duplicate:false});
  });
- if(!out.length)throw Error('No usable transactions found. Check that dates, descriptions, and amounts are present.');
+ if(!out.length)throw Error('No usable transactions found. Check the date format and make sure rows contain a description and a non-zero amount. If your bank uses a different column layout, share a sample with private details removed.');
  return out;
 }
 function isDuplicate(candidate){const desc=String(candidate.note||'').trim().toLowerCase();return tx.some(old=>old.date===candidate.date&&old.type===candidate.type&&Math.round(Number(old.amount)*100)===Math.round(candidate.amount*100)&&String(old.note||'').trim().toLowerCase()===desc)}
