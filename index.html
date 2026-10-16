@@ -52,7 +52,7 @@
 <script>
 (()=>{'use strict';
 const KEY='money-talks-transactions-v1',THEME='money-talks-theme-v1';let tx=[],type='expense';
-const $=id=>document.getElementById(id);const money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n||0);const today=new Date();const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};const currentMonth=iso(today).slice(0,7);
+const $=id=>document.getElementById(id);let money=n=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:2}).format(n||0);const today=new Date();const iso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};const currentMonth=iso(today).slice(0,7);
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');tx=Array.isArray(v)?v.filter(x=>x&&Number.isFinite(Number(x.amount))):[]}catch{tx=[]}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(tx))}catch{toast('Could not save: browser storage may be full. Export a backup.');}}
 function toast(s){const el=$('toast');el.textContent=s;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500)}
