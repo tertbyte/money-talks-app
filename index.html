@@ -78,6 +78,8 @@ $('restoreFile').addEventListener('change',async e=>{const file=e.target.files[0
 const applyTheme=t=>{document.documentElement.dataset.theme=t;$('themeBtn').textContent=t==='dark'?'☀ Light':'☾ Dark';try{localStorage.setItem(THEME,t)}catch{}};let savedTheme='light';try{savedTheme=localStorage.getItem(THEME)||'light'}catch{}applyTheme(savedTheme);$('themeBtn').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
 load();render();
 function hideBootScreen(){const screen=$('bootScreen');if(screen)screen.classList.add('is-hidden')}
-requestAnimationFrame(()=>setTimeout(hideBootScreen,420));setTimeout(hideBootScreen,4500);
+// Keep the branded intro visible briefly before revealing the landing page.
+window.addEventListener('load',()=>setTimeout(hideBootScreen,1500),{once:true});
+setTimeout(hideBootScreen,5000);
 })();
 </script></body></html>
