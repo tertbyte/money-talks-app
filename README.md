@@ -31,3 +31,16 @@ Transactions are stored in the current browser on the current device. Clearing b
 - No build step or third-party dependencies required.
 
 Made for clear, private money tracking.
+
+
+## Install as a Chrome app (PWA)
+This repository now includes a web app manifest, an app icon, and a service worker.
+
+1. Publish the site over **HTTPS** (GitHub Pages or Vercel).
+2. Open the published website in an up-to-date version of Chrome.
+3. Use the **＋ Install app** button when Chrome offers installation. You can also open Chrome's **⋮** menu and choose **Install page as app** if available.
+4. After installation, MONEY TALKS opens in its own app window.
+
+The install button depends on Chrome's install prompt. Browser policies and platform support can affect when the prompt appears. The service worker enables basic offline caching after the app has been visited once.
+
+Note: SVG app icons are included in the manifest. If a target app store or browser requires raster 192×192 and 512×512 icons, add PNG versions before packaging for that store.
