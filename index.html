@@ -31,7 +31,7 @@
 <div class="card"><div class="stat-label"><span class="dot" style="background:#d8a23d"></span>Safe to spend</div><div class="stat-value" id="safe">₹0</div><div class="stat-note">Monthly income less expenses so far</div></div>
 </section>
 <div class="layout"><main>
-<section class="card"><div class="section-head"><div><h3>Add a transaction</h3><p>Quick entry, saved only on this device.</p></div><span class="small">LOCAL</span></div>
+<section class="card"><div class="section-head"><div><h3>Add a transaction</h3><p>Quick entry, saved only on this device.</p></div><span class="small">LOCAL</span></div><button class="btn" id="importFromTransactionBtn" type="button" style="width:100%;margin:0 0 14px">↑ Import from bank statement</button>
 <form class="form" id="txForm">
 <div class="field full"><label>Transaction type</label><div class="type-toggle"><button type="button" class="active" data-type="expense">− Expense</button><button type="button" data-type="income">＋ Income</button></div></div>
 <div class="field"><label for="amount">Amount (₹)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="0.00" required></div>
@@ -84,6 +84,8 @@ $('restoreFile').addEventListener('change',async e=>{const file=e.target.files[0
 const applyTheme=t=>{document.documentElement.dataset.theme=t;$('themeBtn').textContent=t==='dark'?'☀ Light':'☾ Dark';try{localStorage.setItem(THEME,t)}catch{}};let savedTheme='light';try{savedTheme=localStorage.getItem(THEME)||'light'}catch{}applyTheme(savedTheme);$('themeBtn').addEventListener('click',()=>applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark'));
 
 /* Local bank-statement CSV/TSV import with preview and duplicate protection */
+$('importFromTransactionBtn').addEventListener('click',()=>{const panel=$('bankImportPanel');if(panel){panel.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>$('statementFile').click(),250)}else toast('Bank statement import section is unavailable.');});
+
 let stagedImport=[];
 function parseDelimited(text,delimiter){
  const rows=[];let row=[],cell='',quoted=false;
