@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#147d52"><link rel="manifest" href="./manifest.json"><link rel="icon" href="./icon.svg" type="image/svg+xml"><meta name="description" content="MONEY TALKS — a private, local-first money tracker.">
+<meta name="theme-color" content="#147d52"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="MONEY TALKS"><link rel="manifest" href="./manifest.json"><link rel="icon" href="./icon.svg" type="image/svg+xml"><meta name="description" content="MONEY TALKS — a private, local-first money tracker.">
 <title>MONEY TALKS — Your money, clearly.</title>
 <style>
 :root{color-scheme:light;--bg:#f4f6f2;--panel:#fff;--text:#17221c;--muted:#758078;--line:#e4e9e3;--accent:#147d52;--soft:#e4f4e9;--danger:#c14b48;--shadow:0 12px 36px #193d2410}
@@ -85,11 +85,12 @@ const $=id=>document.getElementById(id);let money=n=>new Intl.NumberFormat('en-I
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');tx=Array.isArray(v)?v.filter(x=>x&&Number.isFinite(Number(x.amount))):[]}catch{tx=[]}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(tx))}catch{toast('Could not save: browser storage may be full. Export a backup.');}}
 function toast(s){const el=$('toast');el.textContent=s;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500)}
-let installPrompt=null;const installBtn=$('installBtn');const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+let installPrompt=null;const installBtn=$('installBtn');const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;const isAppleMobile=()=>/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 if(isStandalone()){installBtn.classList.add('hidden')}
+else if(isAppleMobile()){installBtn.classList.remove('hidden');installBtn.textContent='＋ Add to Home Screen'}
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;installBtn.classList.remove('hidden');installBtn.textContent='＋ Install app'});
 window.addEventListener('appinstalled',()=>{installPrompt=null;installBtn.classList.add('hidden');toast('MONEY TALKS installed successfully.')});
-installBtn.addEventListener('click',async()=>{if(isStandalone()){toast('MONEY TALKS is already installed.');return}if(installPrompt){installPrompt.prompt();const choice=await installPrompt.userChoice;installPrompt=null;if(choice.outcome==='accepted'){installBtn.classList.add('hidden')}return}toast('In Chrome, open ⋮ menu and choose “Install page as app” or “Install app”. If it is missing, open this site over HTTPS and try again.')});
+installBtn.addEventListener('click',async()=>{if(isStandalone()){toast('MONEY TALKS is already installed.');return}if(isAppleMobile()){toast('On iPhone/iPad: open this page in Safari, tap Share (the square with the arrow), choose “Add to Home Screen”, then tap Add.');return}if(installPrompt){installPrompt.prompt();const choice=await installPrompt.userChoice;installPrompt=null;if(choice.outcome==='accepted'){installBtn.classList.add('hidden')}return}toast('In Chrome, open ⋮ menu and choose “Install app” or “Add to Home screen”. If it is missing, open this site over HTTPS and try again.')});
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
 function sum(list,t){return list.filter(x=>!t||x.type===t).reduce((a,x)=>a+Number(x.amount),0)}
 function monthTx(){return tx.filter(x=>(x.date||'').slice(0,7)===currentMonth)}
